@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.activity-log-entry {
+    @apply py-1 px-2 rounded;
+}
+
+.activity-log-entry:hover {
+    @apply bg-gray-100;
+}

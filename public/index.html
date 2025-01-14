@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Crawler Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+                <h1 class="text-2xl font-bold text-gray-900">Web Crawler Dashboard</h1>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Crawl Form -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <form id="crawlForm" class="space-y-4">
+                    <div>
+                        <label for="url" class="block text-sm font-medium text-gray-700">URL to Crawl</label>
+                        <div class="mt-1">
+                            <input type="url" name="url" id="url" required
+                                class="block w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="https://example.com">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="depth" class="block text-sm font-medium text-gray-700">Maximum Crawl Depth</label>
+                        <div class="mt-1">
+                            <input type="number" name="depth" id="depth" min="1" max="10" value="3"
+                                class="block w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Enter a value between 1 and 10</p>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button type="submit" id="startButton"
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Start Crawling
+                        </button>
+                        <button type="button" id="pauseButton" disabled
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50">
+                            Pause
+                        </button>
+                        <button type="button" id="resumeButton" disabled
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50">
+                            Resume
+                        </button>
+                        <button type="button" id="stopButton" disabled
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50">
+                            Stop
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+                <!-- Pages Crawled -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <dt class="text-sm font-medium text-gray-500 truncate">Pages Crawled</dt>
+                        <dd id="pagesCrawled" class="mt-1 text-3xl font-semibold text-gray-900">0</dd>
+                    </div>
+                </div>
+
+                <!-- Queue Size -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <dt class="text-sm font-medium text-gray-500 truncate">Queue Size</dt>
+                        <dd id="queueSize" class="mt-1 text-3xl font-semibold text-gray-900">0</dd>
+                    </div>
+                </div>
+
+                <!-- Current Depth -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <dt class="text-sm font-medium text-gray-500 truncate">Current Depth</dt>
+                        <dd id="currentDepth" class="mt-1 text-3xl font-semibold text-gray-900">0</dd>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="bg-white shadow rounded-lg mb-8">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Crawled URLs</h3>
+                    <div id="resultsContainer" class="space-y-2">
+                        <div class="flex justify-between items-center mb-4">
+                            <input type="text" id="urlFilter" placeholder="Filter URLs..." 
+                                class="px-3 py-2 border border-gray-300 rounded-md w-full max-w-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div id="urlList" class="space-y-2 max-h-96 overflow-y-auto">
+                            <!-- URLs will be added here dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Activity Log</h3>
+                    <div id="activityLog" class="bg-gray-50 rounded-lg p-4 h-96 overflow-y-auto space-y-2 font-mono text-sm">
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const socket = io();
+        const form = document.getElementById('crawlForm');
+        const activityLog = document.getElementById('activityLog');
+        const pagesCrawled = document.getElementById('pagesCrawled');
+        const queueSize = document.getElementById('queueSize');
+        const currentDepth = document.getElementById('currentDepth');
+        const urlList = document.getElementById('urlList');
+        const urlFilter = document.getElementById('urlFilter');
+        
+        // Control buttons
+        const startButton = document.getElementById('startButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const resumeButton = document.getElementById('resumeButton');
+        const stopButton = document.getElementById('stopButton');
+        
+        let crawledUrls = new Set();
+        let crawlerStatus = 'idle';
+
+        function updateButtonStates() {
+            startButton.disabled = crawlerStatus !== 'idle' && crawlerStatus !== 'completed' && crawlerStatus !== 'stopped';
+            pauseButton.disabled = crawlerStatus !== 'running';
+            resumeButton.disabled = crawlerStatus !== 'paused';
+            stopButton.disabled = crawlerStatus === 'idle' || crawlerStatus === 'completed' || crawlerStatus === 'stopped';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('url').value;
+            const depth = document.getElementById('depth').value;
+            
+            // Clear previous results
+            crawledUrls.clear();
+            urlList.innerHTML = '';
+            activityLog.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/crawl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url, depth }),
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to start crawling');
+                }
+                
+                crawlerStatus = 'running';
+                updateButtonStates();
+                addLogEntry('Crawling started...', 'blue');
+            } catch (error) {
+                addLogEntry(`Error: ${error.message}`, 'red');
+            }
+        });
+
+        pauseButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/pause', { method: 'POST' });
+                if (response.ok) {
+                    crawlerStatus = 'paused';
+                    updateButtonStates();
+                    addLogEntry('Crawling paused', 'yellow');
+                }
+            } catch (error) {
+                addLogEntry(`Error: ${error.message}`, 'red');
+            }
+        });
+
+        resumeButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/resume', { method: 'POST' });
+                if (response.ok) {
+                    crawlerStatus = 'running';
+                    updateButtonStates();
+                    addLogEntry('Crawling resumed', 'green');
+                }
+            } catch (error) {
+                addLogEntry(`Error: ${error.message}`, 'red');
+            }
+        });
+
+        stopButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/stop', { method: 'POST' });
+                if (response.ok) {
+                    crawlerStatus = 'stopped';
+                    updateButtonStates();
+                    addLogEntry('Crawling stopped', 'red');
+                }
+            } catch (error) {
+                addLogEntry(`Error: ${error.message}`, 'red');
+            }
+        });
+
+        socket.on('crawlUpdate', (update) => {
+            switch (update.type) {
+                case 'log':
+                    addLogEntry(update.message);
+                    break;
+                case 'stats':
+                    pagesCrawled.textContent = update.pagesCrawled;
+                    queueSize.textContent = update.queueSize;
+                    currentDepth.textContent = update.currentDepth;
+                    break;
+                case 'url':
+                    addUrlToResults(update.url);
+                    break;
+                case 'status':
+                    crawlerStatus = update.status;
+                    updateButtonStates();
+                    addLogEntry(`Crawler status: ${update.status}`, 
+                        update.status === 'completed' ? 'green' : 
+                        update.status === 'stopped' ? 'red' : 'blue');
+                    break;
+                case 'results':
+                    if (update.results && update.results.crawledUrls) {
+                        update.results.crawledUrls.forEach(urlData => {
+                            addUrlToResults(urlData.url);
+                        });
+                    }
+                    break;
+            }
+        });
+
+        function addLogEntry(message, color = 'gray') {
+            const entry = document.createElement('div');
+            entry.className = `text-${color}-600`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            activityLog.appendChild(entry);
+            activityLog.scrollTop = activityLog.scrollHeight;
+        }
+
+        function addUrlToResults(url) {
+            if (!crawledUrls.has(url)) {
+                crawledUrls.add(url);
+                const urlElement = document.createElement('div');
+                urlElement.className = 'p-2 hover:bg-gray-50 rounded url-item';
+                urlElement.innerHTML = `
+                    <a href="${url}" target="_blank" class="text-blue-600 hover:text-blue-800 break-all">
+                        ${url}
+                    </a>
+                `;
+                urlList.appendChild(urlElement);
+                urlList.scrollTop = urlList.scrollHeight;
+            }
+        }
+
+        urlFilter.addEventListener('input', (e) => {
+            const filterText = e.target.value.toLowerCase();
+            document.querySelectorAll('.url-item').forEach(item => {
+                const url = item.textContent.toLowerCase();
+                item.style.display = url.includes(filterText) ? 'block' : 'none';
+            });
+        });
+
+        // Initialize button states
+        updateButtonStates();
+    </script>
+</body>
+</html>
